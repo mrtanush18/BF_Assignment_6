@@ -1,0 +1,117 @@
+---
+title: "HW 6"
+author: "Tanush"
+email : "ts1333@scarletmail.rutgers.edu"
+date: "17/11/2024"
+output: html_document
+---
+
+The dataset includes the following relevant columns for regression analysis:
+
+Dependent variable: Weekly_Sales (target variable).
+
+Independent variables: 
+Holiday_Flag (0 for false, 1 for true)
+Temperature
+Fuel price
+CPI (Consumer Price Index, tracks price change over time)
+Unemployment
+
+# 1. Perform regression (2 Points)
+
+```{r}
+
+# Load necessary libraries
+library(UsingR)
+library(readxl)
+
+# Load the dataset
+data <- read_excel("Walmart_Sales.xlsx", sheet = "Walmart_Sales")
+
+# Perform linear regression
+model <- lm(Weekly_Sales ~ Holiday_Flag + Temperature + Fuel_Price + CPI + Unemployment, data = data)
+
+# Summary of the model
+summary(model)
+
+# Create Sample Records for simulation
+new_data <- data.frame(Holiday_Flag = sample(0:1, 1e6, replace = TRUE),
+                       Temperature = rnorm(1e6, mean = mean(data$Temperature), sd = sd(data$Temperature)),
+                       Fuel_Price = rnorm(1e6, mean = mean(data$Fuel_Price), sd = sd(data$Fuel_Price)),
+                       CPI = rnorm(1e6, mean = mean(data$CPI), sd = sd(data$CPI)),
+                       Unemployment = rnorm(1e6, mean = mean(data$Unemployment), sd = sd(data$Unemployment)))
+
+# Predict Weekly_Sales for the new data
+new_data$Weekly_Sales <- predict(model, newdata = new_data)
+
+# Visualize Simulated Data
+smoothScatter(new_data$Temperature, new_data$Weekly_Sales)
+abline(model, col="red", lwd=3)
+
+# Sample from the new dataset
+set.seed(12345)
+sample_data <- new_data[sample(1:1e6, 50, replace = FALSE),]
+
+# Plot Sample Data
+plot(sample_data$Temperature, sample_data$Weekly_Sales, pch=19, col="blue")
+
+# Perform Linear Regression on Sample Data
+sample_model <- lm(Weekly_Sales ~ Temperature, data = sample_data)
+lines(sample_data$Temperature, sample_model$fitted, lwd=3, lty=2)
+abline(model, col="red", lwd=3)
+
+# Perform Multiple Sampling and Plot
+sample_models <- vector("list", 100)
+for(i in 1:100){
+  sample_data <- new_data[sample(1:1e6, 50, replace = FALSE),]
+  sample_models[[i]] <- lm(Weekly_Sales ~ Temperature, data = sample_data)
+}
+
+# Visualize Multiple Sample Models
+smoothScatter(new_data$Temperature, new_data$Weekly_Sales)
+for(i in 1:100) { abline(sample_models[[i]], lwd=3, lty=2) }
+abline(model, col="red", lwd=4)
+
+# Histogram of Coefficients
+par(mfrow=c(1,2))
+hist(sapply(sample_models, function(x) coef(x)[1]), col="blue", xlab="Intercept", main="")
+hist(sapply(sample_models, function(x) coef(x)[2]), col="blue", xlab="Slope", main="")
+
+# Model Interpretation and Diagnostics
+summary(model)
+```
+# 2. Performed Model Acceptance Steps (above) and show the interpretation of the model output (3 Points)
+
+1. Coefficients and Significance
+
+Holiday_Flag: 74,891.7 (Significant with p = 0.00675) - Weekly sales increase by approximately $74,891.7 during holiday weeks.
+
+Temperature: -724.2 (Borderline significant with p = 0.07060) - Slight decrease in weekly sales with an increase in temperature.
+
+Fuel_Price: -10,167.9 (Not significant with p = 0.51891) - No strong evidence of an effect on weekly sales.
+
+CPI: -1,598.9 (Highly significant with p = 3.02e-16) - Weekly sales decrease as CPI increases.
+
+Unemployment: -41,552.3 (Highly significant with p < 2e-16) - Weekly sales decrease as unemployment increases.
+
+The model shows significant effects for Holiday_Flag, CPI, and Unemployment on weekly sales. The regression coefficients for Temperature and Fuel_Price are not statistically significant, implying that these variables might not have a substantial impact on weekly sales in this dataset.
+
+F-statistic: 33.57, p-value < 2.2e-16 - Overall, the model is statistically significant.
+
+# 3. Perform Residual Analysis and explain the insights (3 Points)
+```{r}
+# Residual analysis
+
+# Residuals vs. Fitted Values Plot
+par(mfrow=c(2,2))
+plot(model)
+
+```
+
+Residuals vs Fitted Plot : Random Scatter hence model is good at predicting.
+
+Normal Q-Q Plot : Points lie on line so differences between actual and predicted sales are normal.
+
+Scale-Location Plot : Even spread so differences are consistent.
+
+Residuals vs Leverage Plot : No outliers hence no data points are overly influencing the model.
